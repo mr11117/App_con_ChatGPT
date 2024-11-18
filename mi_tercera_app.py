@@ -1,111 +1,84 @@
 import streamlit as st
 import pandas as pd
-import datetime
+from datetime import datetime
 
-# Título de la app
-st.title("Registro de Finanzas Personales")
+# Configuración de la app
+st.title('Control de Finanzas Personales')
+st.sidebar.header('Menú de navegación')
 
-# Autor de la app
-st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL RAMIREZ GAVIRIA")
+# Cargar los datos
+if 'datos' not in st.session_state:
+    st.session_state.datos = pd.DataFrame(columns=['Fecha', 'Categoría', 'Tipo', 'Monto', 'Descripción'])
 
-# Cargar datos: En este caso, simularemos la base de datos con pandas DataFrame
-# Puedes modificar este código para integrarlo con una base de datos real
-if 'finanzas' not in st.session_state:
-    st.session_state.finanzas = pd.DataFrame(columns=["Fecha", "Categoría", "Descripción", "Monto", "Tipo"])
+# Función para agregar una transacción
+def agregar_transaccion(fecha, categoria, tipo, monto, descripcion):
+    nueva_transaccion = pd.DataFrame({
+        'Fecha': [fecha],
+        'Categoría': [categoria],
+        'Tipo': [tipo],
+        'Monto': [monto],
+        'Descripción': [descripcion]
+    })
+    st.session_state.datos = pd.concat([st.session_state.datos, nueva_transaccion], ignore_index=True)
 
-# Función para agregar un nuevo registro de ingreso/gasto
-st.subheader("Registrar Ingreso/Gasto")
+# Sección para agregar ingresos y gastos
+st.sidebar.subheader('Registrar una transacción')
+fecha = st.sidebar.date_input('Fecha', min_value=datetime(2020, 1, 1), value=datetime.today())
+categoria = st.sidebar.selectbox('Categoría', ['Alquiler', 'Alimentación', 'Transporte', 'Ocio', 'Otros'])
+tipo = st.sidebar.selectbox('Tipo de transacción', ['Ingreso', 'Gasto'])
+monto = st.sidebar.number_input('Monto', min_value=0.01, step=0.01, value=0.0)
+descripcion = st.sidebar.text_input('Descripción', value='')
 
-categoria = st.selectbox("Selecciona la categoría:", ["Ingreso", "Gasto"])
-descripcion = st.text_input("Descripción del registro")
-monto = st.number_input("Monto", min_value=0.0, step=0.01)
+# Botón para agregar la transacción
+if st.sidebar.button('Agregar transacción'):
+    if monto > 0 and descripcion != '':
+        agregar_transaccion(fecha, categoria, tipo, monto, descripcion)
+        st.sidebar.success('Transacción agregada exitosamente!')
+    else:
+        st.sidebar.error('Por favor complete todos los campos correctamente.')
 
-tipo = "Ingreso" if categoria == "Ingreso" else "Gasto"
-fecha = st.date_input("Fecha", datetime.date.today())
+# Mostrar el registro de transacciones
+st.subheader('Registro de transacciones')
+st.dataframe(st.session_state.datos)
 
-# Agregar al DataFrame
-if st.button("Registrar"):
-    nuevo_registro = {
-        "Fecha": fecha,
-        "Categoría": categoria,
-        "Descripción": descripcion,
-        "Monto": monto,
-        "Tipo": tipo
-    }
-    st.session_state.finanzas = pd.concat([st.session_state.finanzas, pd.DataFrame([nuevo_registro])], ignore_index=True)
-    st.success(f"{categoria} registrado correctamente.")
+# Funciones para calcular las diferencias entre presupuestos y lo real
+def reporte_diferencias(periodo='mensual'):
+    # Convertir la columna 'Fecha' a tipo datetime
+    st.session_state.datos['Fecha'] = pd.to_datetime(st.session_state.datos['Fecha'])
+    
+    # Filtrar por el periodo (mensual o semanal)
+    if periodo == 'mensual':
+        st.session_state.datos['Mes'] = st.session_state.datos['Fecha'].dt.month
+        st.session_state.datos['Año'] = st.session_state.datos['Fecha'].dt.year
+        periodo_actual = st.session_state.datos.groupby(['Año', 'Mes', 'Categoría', 'Tipo'])['Monto'].sum().reset_index()
+    elif periodo == 'semanal':
+        st.session_state.datos['Semana'] = st.session_state.datos['Fecha'].dt.isocalendar().week
+        st.session_state.datos['Año'] = st.session_state.datos['Fecha'].dt.year
+        periodo_actual = st.session_state.datos.groupby(['Año', 'Semana', 'Categoría', 'Tipo'])['Monto'].sum().reset_index()
+    
+    # Mostrar el reporte
+    st.subheader(f'Reporte de {periodo} - Diferencias Presupuesto vs Real')
+    st.dataframe(periodo_actual)
 
-# Mostrar los registros
-st.subheader("Registros de Ingresos y Gastos")
-st.dataframe(st.session_state.finanzas)
+# Mostrar los reportes
+st.sidebar.subheader('Generar reporte')
+periodo = st.sidebar.radio('Selecciona el periodo', ['mensual', 'semanal'])
+if st.sidebar.button(f'Reporte {periodo}'):
+    reporte_diferencias(periodo)
 
-# Mostrar resúmenes mensuales y semanales
-st.subheader("Reportes de Finanzas")
+# Meta de ahorro
+st.sidebar.subheader('Metas de Ahorro')
+meta_ahorro = st.sidebar.number_input('Meta de ahorro para este mes', min_value=0.0, value=0.0, step=0.01)
+ahorrado = st.sidebar.number_input('Ahorro realizado hasta ahora', min_value=0.0, value=0.0, step=0.01)
 
-# Reporte semanal y mensual
-fecha_actual = datetime.date.today()
+# Calcular el progreso hacia la meta de ahorro
+progreso = (ahorrado / meta_ahorro) * 100 if meta_ahorro > 0 else 0
+st.sidebar.write(f'Progreso hacia la meta de ahorro: {progreso:.2f}%')
 
-# Filtrar los registros de esta semana y de este mes
-finanzas_semanales = st.session_state.finanzas[st.session_state.finanzas["Fecha"] >= (fecha_actual - datetime.timedelta(days=7))]
-finanzas_mensuales = st.session_state.finanzas[st.session_state.finanzas["Fecha"].dt.month == fecha_actual.month]
+# Gráfico de progreso
+st.sidebar.progress(progreso)
 
-# Calcular la diferencia entre lo presupuestado y lo real
-st.subheader("Reporte Semanal")
 
-# Establecer presupuesto para cada categoría
-presupuesto_semanal = {
-    "Ingreso": 1000,  # Ejemplo de presupuesto semanal de ingresos
-    "Gasto": 500,     # Ejemplo de presupuesto semanal de gastos
-}
-
-# Cálculo de lo real
-ingresos_semanales = finanzas_semanales[finanzas_semanales["Tipo"] == "Ingreso"]["Monto"].sum()
-gastos_semanales = finanzas_semanales[finanzas_semanales["Tipo"] == "Gasto"]["Monto"].sum()
-
-# Mostrar el reporte semanal
-st.write(f"Ingresos reales en la semana: {ingresos_semanales}")
-st.write(f"Gastos reales en la semana: {gastos_semanales}")
-
-st.write(f"Presupuesto de ingresos: {presupuesto_semanal['Ingreso']}")
-st.write(f"Presupuesto de gastos: {presupuesto_semanal['Gasto']}")
-
-st.write(f"Diferencia de ingresos: {ingresos_semanales - presupuesto_semanal['Ingreso']}")
-st.write(f"Diferencia de gastos: {gastos_semanales - presupuesto_semanal['Gasto']}")
-
-# Reporte mensual
-st.subheader("Reporte Mensual")
-
-# Establecer presupuesto mensual
-presupuesto_mensual = {
-    "Ingreso": 4000,  # Ejemplo de presupuesto mensual de ingresos
-    "Gasto": 2000,    # Ejemplo de presupuesto mensual de gastos
-}
-
-# Cálculo de lo real
-ingresos_mensuales = finanzas_mensuales[finanzas_mensuales["Tipo"] == "Ingreso"]["Monto"].sum()
-gastos_mensuales = finanzas_mensuales[finanzas_mensuales["Tipo"] == "Gasto"]["Monto"].sum()
-
-# Mostrar el reporte mensual
-st.write(f"Ingresos reales en el mes: {ingresos_mensuales}")
-st.write(f"Gastos reales en el mes: {gastos_mensuales}")
-
-st.write(f"Presupuesto de ingresos: {presupuesto_mensual['Ingreso']}")
-st.write(f"Presupuesto de gastos: {presupuesto_mensual['Gasto']}")
-
-st.write(f"Diferencia de ingresos: {ingresos_mensuales - presupuesto_mensual['Ingreso']}")
-st.write(f"Diferencia de gastos: {gastos_mensuales - presupuesto_mensual['Gasto']}")
-
-# Mostrar las metas de ahorro
-st.subheader("Metas de Ahorro")
-
-# Establecer metas de ahorro
-meta_ahorro = st.number_input("Meta de ahorro del mes", min_value=0.0, step=0.01)
-
-# Calcular el ahorro real
-ahorro_real = ingresos_mensuales - gastos_mensuales
-
-# Mostrar el ahorro
-st.write(f"Ahorro real hasta el momento: {ahorro_real}")
 st.write(f"Meta de ahorro: {meta_ahorro}")
 st.write(f"Diferencia con la meta de ahorro: {ahorro_real - meta_ahorro}")
 
