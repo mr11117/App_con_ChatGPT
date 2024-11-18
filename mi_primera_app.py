@@ -3,7 +3,7 @@ import streamlit as st
 # Título de la app
 st.title("Mi primera app")
 
-# Autor de la app
+# Autor de la app 
 st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL")
 
 # Solicitar el nombre del usuario
