@@ -6,7 +6,7 @@ import datetime
 st.title("Registro de Finanzas Personales")
 
 # Autor de la app
-st.write("Autor: Esta app fue elaborada por COLOQUE AQUÍ SU NOMBRE")
+st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL RAMIREZ GAVIRIA")
 
 # Cargar datos: En este caso, simularemos la base de datos con pandas DataFrame
 # Puedes modificar este código para integrarlo con una base de datos real
