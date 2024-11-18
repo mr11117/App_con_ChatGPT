@@ -4,7 +4,7 @@ import streamlit as st
 st.title("Conversor Universal de Unidades")
 
 # Autor de la app
-st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL")
+st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL RAMIREZ GAVIRIA")
 
 # Selección de categoría
 categoria = st.selectbox(
