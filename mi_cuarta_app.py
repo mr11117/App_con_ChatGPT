@@ -3,6 +3,8 @@ import streamlit as st
 # Título de la aplicación
 st.title("Cálculo del P.A.P.A. (Promedio Acumulado Ponderado Académico)")
 
+st.write("Autor: Esta app fue elaborada por MIGUEL ANGEL RAMIREZ GAVIRIA")
+
 # Descripción
 st.write("Esta aplicación permite calcular el P.A.P.A. ingresando las notas y los créditos de cada asignatura.")
 
